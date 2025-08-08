@@ -1,38 +1,56 @@
-import mongoose from "mongoose";
+import { Schema, model } from 'mongoose';
 
-const a=1000;
-const userSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    email: { type: String, unique: true, required: true },
-    password: { type: String, required: true },
-    age: { type: Number, required: true },
-    gender: { type: String, enum: ['Male', 'Female', 'Other'], required: true },
-    profilePicture: { type: String, default: '' },
-
-    location: {
-    type: { type: String, enum: ['Point']},
-    coordinates: { type: [Number] }, // or just remove `required: true`
-    },
-
-    sentRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    receivedRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-
-     pastHangouts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Hangout' }],
-  hangoutCount: { type: Number, default: 0 }, // ✅ new
-  averageRating: { type: Number, default: 0 },
-
-    // Optional additions
-    bio: { type: String, default: '' },
-    isOnline: { type: Boolean, default: false },
-    socketId: { type: String, default: '' },
+// Schema for storing location data in GeoJSON format
+const pointSchema = new Schema({
+  type: {
+    type: String,
+    enum: ['Point'],
+    required: true,
   },
-  { timestamps: true }
-);
+  coordinates: {
+    type: [Number], // [longitude, latitude]
+    required: true,
+  },
+});
 
-// Required for geolocation queries
-userSchema.index({ location: '2dsphere' });
+const userSchema = new Schema({
+  username: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true,
+  },
+  // IMPORTANT: Never store plain text passwords. This field should store a hashed password.
+  password: {
+    type: String,
+    required: true,
+  },
+  profilePicture: {
+    type: String,
+    default: 'default-avatar-url.jpg',
+  },
+  bio: {
+    type: String,
+    maxlength: 250,
+  },
+  location: {
+    type: pointSchema,
+    // Create a 2dsphere index for efficient geospatial queries
+    index: '2dsphere',
+  },
+  connections: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+  }],
+}, {
+  timestamps: true,
+});
 
-const User = mongoose.model("User", userSchema);
-export default User;
+export default model('User', userSchema);
